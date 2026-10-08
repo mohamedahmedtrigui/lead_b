@@ -50,6 +50,16 @@ class LeadIsolationTest extends TestCase
         $this->assertLessThan($rows[3]['callback_at'], $rows[2]['callback_at']);
     }
 
+    public function test_search_is_case_insensitive(): void
+    {
+        $admin = $this->admin();
+        Lead::factory()->create(['name' => 'Mjjedi Hedi']);
+        Lead::factory()->create(['name' => 'Autre Client']);
+
+        $this->actingAs($admin)->getJson('/api/v1/leads?search=hedi')->assertOk()->assertJsonCount(1, 'data');
+        $this->actingAs($admin)->getJson('/api/v1/leads?search=MJJEDI')->assertOk()->assertJsonCount(1, 'data');
+    }
+
     public function test_dispatcher_cannot_access_another_dispatchers_lead_by_id(): void
     {
         $alice = $this->dispatcher();

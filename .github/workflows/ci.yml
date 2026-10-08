@@ -7,14 +7,30 @@ on:
 
 jobs:
   tests:
+    name: Tests (${{ matrix.database }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, pgsql] # pgsql = same engine as production (Neon, PostgreSQL 16)
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lead_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: mbstring, pdo_sqlite, intl
+          extensions: mbstring, pdo_sqlite, pdo_pgsql, intl, gd
           coverage: none
 
       - name: Install dependencies
@@ -26,7 +42,27 @@ jobs:
           php artisan key:generate
 
       - name: Code style (Pint)
+        if: matrix.database == 'sqlite'
         run: vendor/bin/pint --test
 
-      - name: Tests
+      - name: Tests (SQLite)
+        if: matrix.database == 'sqlite'
         run: php artisan test
+
+      - name: Tests (PostgreSQL 16)
+        if: matrix.database == 'pgsql'
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: lead_test
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+        run: php artisan test
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t miraldrive-lead-api .

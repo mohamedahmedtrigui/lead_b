@@ -133,9 +133,9 @@ class Lead extends Model
         $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim($term)).'%';
 
         return $query->where(fn (Builder $q) => $q
-            ->where('name', 'like', $like)
-            ->orWhere('phone', 'like', $like)
-            ->orWhere('email', 'like', $like)
-            ->orWhere('whatsapp_number', 'like', $like));
+            ->whereLike('name', $like)
+            ->orWhereLike('phone', $like)
+            ->orWhereLike('email', $like)
+            ->orWhereLike('whatsapp_number', $like));
     }
 }

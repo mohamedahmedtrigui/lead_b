@@ -99,6 +99,36 @@ return [
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
+        /*
+        | Tooling connections (php artisan db:copy / backups), never the default.
+        | neon:         production database, DIRECT endpoint (not "-pooler").
+        | local_backup: local MySQL mirror refreshed from Neon (offline fallback).
+        */
+        'neon' => [
+            'driver' => 'pgsql',
+            'url' => env('NEON_DB_URL'),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('NEON_DB_SSLMODE', 'require'),
+        ],
+
+        'local_backup' => [
+            'driver' => 'mysql',
+            'host' => env('LOCAL_BACKUP_DB_HOST', '127.0.0.1'),
+            'port' => env('LOCAL_BACKUP_DB_PORT', '3306'),
+            'database' => env('LOCAL_BACKUP_DB_DATABASE', 'lead_backup'),
+            'username' => env('LOCAL_BACKUP_DB_USERNAME', 'root'),
+            'password' => env('LOCAL_BACKUP_DB_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => 'InnoDB',
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),

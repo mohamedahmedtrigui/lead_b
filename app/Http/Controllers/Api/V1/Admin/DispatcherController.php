@@ -37,9 +37,9 @@ class DispatcherController extends Controller
             ->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
             ->when($request->query('search'), function ($q, $search) {
                 $like = '%'.$search.'%';
-                $q->where(fn ($q) => $q->where('first_name', 'like', $like)
-                    ->orWhere('last_name', 'like', $like)
-                    ->orWhere('email', 'like', $like));
+                $q->where(fn ($q) => $q->whereLike('first_name', $like)
+                    ->orWhereLike('last_name', $like)
+                    ->orWhereLike('email', $like));
             })
             ->withCount([
                 'assignedLeads as assigned_leads_count',

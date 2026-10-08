@@ -1,0 +1,121 @@
+# Render Blueprint — MiralDrive Lead Qualification (API + SPA).
+# Dashboard: New + > Blueprint > select this repository (lead_b).
+#
+# The SPA proxies /api/* and /sanctum/* to the API, so the browser only ever
+# talks to ONE origin: Sanctum session cookies work on *.onrender.com
+# (onrender.com is a public suffix: two sub-domains would be cross-site).
+#
+# If Render gives the services other URLs (name already taken), update the
+# three URLs marked "SERVICE URL" below.
+
+services:
+  # ---------------------------------------------------------------- API
+  - type: web
+    name: miraldrive-lead-api
+    runtime: docker
+    repo: https://github.com/mohamedahmedtrigui/lead_b
+    branch: main
+    dockerfilePath: ./Dockerfile
+    region: frankfurt # closest to Tunisia; create the Neon project in AWS eu-central-1 (Frankfurt)
+    plan: free # starter (7$/month) for production: no sleep after 15 min of inactivity
+    healthCheckPath: /up
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: APP_NAME
+        value: MiralDrive Lead Qualification
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY # php artisan key:generate --show
+        sync: false
+      - key: APP_URL # SERVICE URL
+        value: https://miraldrive-lead-api.onrender.com
+      - key: FRONTEND_URL # SERVICE URL
+        value: https://miraldrive-lead-app.onrender.com
+      - key: APP_LOCALE
+        value: fr
+      - key: APP_TIMEZONE
+        value: UTC
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: warning
+      # Neon — DIRECT connection string (not "-pooler"), PostgreSQL 16:
+      # postgresql://USER:PASSWORD@ep-xxx.eu-central-1.aws.neon.tech/neondb?sslmode=require
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        sync: false
+      - key: DB_SSLMODE
+        value: require
+      - key: SESSION_DRIVER
+        value: database
+      - key: SESSION_LIFETIME
+        value: 120
+      - key: SESSION_ENCRYPT
+        value: true
+      - key: SESSION_SECURE_COOKIE
+        value: true
+      - key: SESSION_SAME_SITE
+        value: lax
+      - key: SANCTUM_STATEFUL_DOMAINS # SERVICE URL (host of the SPA)
+        value: miraldrive-lead-app.onrender.com
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://miraldrive-lead-app.onrender.com
+      - key: TRUSTED_PROXIES
+        value: "*"
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: BCRYPT_ROUNDS
+        value: 12
+      - key: NRP_MAX_ATTEMPTS
+        value: 3
+      - key: NRP_MIN_INTERVAL_MINUTES
+        value: 30
+      - key: LEADS_IMPORT_TIMEZONE
+        value: Africa/Tunis
+      - key: LEADS_DEFAULT_COUNTRY_CODE
+        value: 216
+
+  # ---------------------------------------------------------------- SPA
+  - type: web
+    name: miraldrive-lead-app
+    runtime: static
+    repo: https://github.com/mohamedahmedtrigui/lead_f
+    branch: main
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_URL # API reached on the same origin through the rewrites below
+        value: same-origin
+      - key: VITE_APP_NAME
+        value: MiralDrive Leads
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://miraldrive-lead-api.onrender.com/api/* # SERVICE URL
+      - type: rewrite
+        source: /sanctum/*
+        destination: https://miraldrive-lead-api.onrender.com/sanctum/* # SERVICE URL
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable

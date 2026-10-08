@@ -154,6 +154,12 @@ FormRequest validation on every input · rate limiting (`login` 5/min per
 email+IP, `register` 10/h per IP, `import` 5/min, `api` 180/min) · strict
 Eloquent mode outside production · personal data (CSV) never committed.
 
+## Deployment (Render + Neon)
+
+Step-by-step guide (French): [docs/DEPLOIEMENT.md](docs/DEPLOIEMENT.md) — Render Blueprint
+(`render.yaml`, Docker), Neon PostgreSQL 16, data migration (`php artisan db:copy mysql neon`),
+daily local backups (`scripts/backup-neon.ps1`) and restore procedures.
+
 ## Production checklist
 
 1. Copy `.env.production.example` to `.env`, set `APP_KEY`, DB credentials, domains.

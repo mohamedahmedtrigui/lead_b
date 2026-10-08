@@ -18,7 +18,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // Sanctum SPA authentication: session cookies + CSRF for the React app.
         $middleware->statefulApi();
         $middleware->throttleApi('api');
-        $middleware->trustProxies(at: env('TRUSTED_PROXIES') ? explode(',', env('TRUSTED_PROXIES')) : null);
+        // Behind Render's load balancer: TRUSTED_PROXIES=* (string, not ['*']) so that
+        // HTTPS, client IPs (rate limiting) and hosts are read from X-Forwarded-*.
+        $proxies = env('TRUSTED_PROXIES');
+        $middleware->trustProxies(at: match (true) {
+            blank($proxies) => null,
+            $proxies === '*' => '*',
+            default => array_map('trim', explode(',', $proxies)),
+        });
 
         $middleware->alias([
             'role' => EnsureRole::class,
