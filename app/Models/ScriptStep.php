@@ -16,6 +16,7 @@ class ScriptStep extends Model
         'question',
         'prompts',
         'options',
+        'responses',
         'tips',
         'updated_by',
     ];
@@ -26,6 +27,7 @@ class ScriptStep extends Model
             'position' => 'integer',
             'prompts' => 'array',
             'options' => 'array',
+            'responses' => 'array',
         ];
     }
 

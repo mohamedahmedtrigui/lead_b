@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\DB;
 
 class QualificationService
 {
-    private const B2B_FIELDS = ['company_name', 'company_size', 'employees_concerned', 'trips_per_day',
+    private const B2B_FIELDS = ['company_name', 'company_size', 'employees_concerned', 'b2b_same_schedule',
         'decision_maker_name', 'decision_role', 'total_employees', 'estimated_passengers_per_trip'];
 
     private const EXPERIENCE_FIELDS = ['experience_rating', 'experience_feedback', 'improvement_request'];
@@ -149,6 +149,10 @@ class QualificationService
      */
     private function clearIrrelevantAnswers(LeadQualification $q): void
     {
+        if (! $q->sharedApplicable()) {
+            $q->shared_transport = null;
+        }
+
         if ($q->shared_transport !== SharedTransport::YES) {
             $q->shared_direction = null;
         }

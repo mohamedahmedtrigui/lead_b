@@ -21,16 +21,20 @@ class ScriptService
     }
 
     /**
-     * Creates missing steps from the defaults (keeps admin edits untouched).
+     * Aligns the stored script with the code: creates missing steps, removes
+     * steps that no longer exist and fixes positions. Admin wording is kept,
+     * unless $reset is true (the default wording is then restored).
      */
-    public function syncDefaults(): void
+    public function syncDefaults(bool $reset = false): void
     {
+        ScriptStep::query()->whereNotIn('key', DefaultScript::keys())->delete();
+
         foreach (DefaultScript::steps() as $position => $step) {
             $model = ScriptStep::firstOrNew(['key' => $step['key']]);
-            $model->position = $position + 1;
-            if (! $model->exists) {
+            if (! $model->exists || $reset) {
                 $model->fill($step);
             }
+            $model->position = $position + 1;
             $model->save();
         }
     }
@@ -57,7 +61,13 @@ class ScriptService
                 ->all();
         }
 
+        $responses = $step->responses ?? [];
+        foreach ($data['responses'] ?? [] as $field => $replies) {
+            $responses[$field] = array_filter($replies, fn ($text) => filled($text));
+        }
+
         $step->fill([
+            'responses' => $responses,
             'title' => $data['title'],
             'objective' => $data['objective'] ?? null,
             'script' => $data['script'] ?? null,

@@ -21,6 +21,7 @@ class ScriptStepResource extends JsonResource
             'question' => $this->question,
             'prompts' => (object) ($this->prompts ?? []),
             'options' => (object) ($this->options ?? []),
+            'responses' => (object) ($this->responses ?? []),
             'tips' => $this->tips,
             'updated_at' => $this->updated_at?->toIso8601String(),
             'editor' => $this->whenLoaded('editor', fn () => $this->editor?->full_name),

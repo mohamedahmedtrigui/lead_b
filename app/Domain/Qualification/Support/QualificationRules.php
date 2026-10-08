@@ -69,9 +69,11 @@ class QualificationRules
             'company_size' => $int(0, 1000000),
             'employees_concerned' => $int(0, 1000000),
             'trips_per_day' => $int(0, 1000),
+            'b2b_same_schedule' => ['nullable', 'boolean'],
             'decision_maker_name' => $text(),
             'decision_role' => $enum(DecisionRole::class),
             'main_priority' => $enum(PurchaseDriver::class),
+            'recap_confirmed' => ['nullable', 'boolean'],
             'wants_quotation' => ['nullable', 'boolean'],
             'wants_callback' => ['nullable', 'boolean'],
             'priority_stars' => $int(1, 5),
@@ -109,17 +111,26 @@ class QualificationRules
             || ($input['transport_need'] ?? null) === TransportNeed::EMPLOYEE->value;
 
         foreach (['beneficiary', 'transport_need', 'departure', 'destination', 'trip_type', 'frequency',
-            'shared_transport', 'used_miraldrive', 'current_provider', 'main_priority', 'priority_stars'] as $field) {
+            'used_miraldrive', 'current_provider', 'priority_stars'] as $field) {
             $require($field);
         }
 
         $require($isB2b ? 'estimated_passengers_per_trip' : 'passengers_count');
 
+        // The client must have validated the recap ("C'est bien ça ?").
+        $rules['recap_confirmed'] = ['required', 'accepted'];
+
+        // Shared transport is only proposed to a single person, outside B2B.
+        $sharedApplicable = ! $isB2b && (int) ($input['passengers_count'] ?? 1) <= 1;
+        if ($sharedApplicable) {
+            $require('shared_transport');
+        }
+
         if (($input['frequency'] ?? null) === Frequency::FIXED_DAYS->value) {
             $rules['days_of_week'] = ['required', 'array', 'min:1', 'max:7'];
         }
 
-        if (($input['shared_transport'] ?? null) === SharedTransport::YES->value) {
+        if ($sharedApplicable && ($input['shared_transport'] ?? null) === SharedTransport::YES->value) {
             $require('shared_direction');
         }
 
@@ -163,6 +174,7 @@ class QualificationRules
             'company_name' => 'nom de l\'entreprise',
             'decision_role' => 'rôle dans la décision',
             'main_priority' => 'priorité principale',
+            'recap_confirmed' => 'validation du récapitulatif',
             'priority_stars' => 'priorité (étoiles)',
             'summary_note' => 'résumé de l\'appel',
             'next_action' => 'prochaine action',

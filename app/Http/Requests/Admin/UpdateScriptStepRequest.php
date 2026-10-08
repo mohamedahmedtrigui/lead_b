@@ -37,10 +37,15 @@ class UpdateScriptStepRequest extends FormRequest
             'options' => $optionFields ? ['nullable', 'array:'.implode(',', $optionFields)] : ['nullable', 'array', 'max:0'],
         ];
 
-        // options.{field} = { VALUE: "label", ... } restricted to known values.
+        // options.{field} = { VALUE: "label", ... } and
+        // responses.{field} = { VALUE: "reply" }, restricted to known values.
+        $rules['responses'] = $optionFields ? ['nullable', 'array:'.implode(',', $optionFields)] : ['nullable', 'array', 'max:0'];
         foreach ($default['options'] as $field => $options) {
-            $rules["options.{$field}"] = ['nullable', 'array:'.implode(',', array_column($options, 'value'))];
+            $values = implode(',', array_column($options, 'value'));
+            $rules["options.{$field}"] = ['nullable', 'array:'.$values];
             $rules["options.{$field}.*"] = ['required', 'string', 'max:120'];
+            $rules["responses.{$field}"] = ['nullable', 'array:'.$values];
+            $rules["responses.{$field}.*"] = ['nullable', 'string', 'max:1000'];
         }
 
         return $rules;

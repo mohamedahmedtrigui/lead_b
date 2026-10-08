@@ -35,6 +35,7 @@ class QualificationTest extends TestCase
             'current_provider' => 'TRADITIONAL_TAXI',
             'pain_point' => 'Coût élevé',
             'main_priority' => 'PUNCTUALITY',
+            'recap_confirmed' => true,
             'wants_quotation' => true,
             'priority_stars' => 4,
             'summary_note' => 'Client recherche transport quotidien Sfax → centre-ville, 2 personnes, ouvert au partage.',
@@ -87,9 +88,11 @@ class QualificationTest extends TestCase
         $this->postJson("/api/v1/leads/{$lead->id}/qualification/complete", $this->answers())
             ->assertOk()
             ->assertJsonPath('qualification.status', 'COMPLETED')
-            // daily 20 + recurring 15 + passengers 15 + shared 15 + quotation 10
-            ->assertJsonPath('qualification.interest_score', 75)
+            // daily 20 + recurring 15 + passengers 15 + quotation 10
+            // (shared transport is not proposed to a group of 2: answer dropped)
+            ->assertJsonPath('qualification.interest_score', 60)
             ->assertJsonPath('qualification.interest_level', 'WARM')
+            ->assertJsonPath('qualification.shared_transport', null)
             ->assertJsonPath('lead.status', 'QUALIFIED');
 
         $call = CallAttempt::where('lead_id', $lead->id)->sole();
@@ -109,6 +112,24 @@ class QualificationTest extends TestCase
             'summary_note' => 'trop court',
         ])->assertUnprocessable()
             ->assertJsonValidationErrors(['summary_note', 'beneficiary', 'departure', 'destination', 'frequency', 'priority_stars']);
+    }
+
+    public function test_recap_must_be_validated_and_shared_only_asked_to_a_single_person(): void
+    {
+        $dispatcher = $this->dispatcher();
+        $lead = Lead::factory()->assignedTo($dispatcher->id)->create();
+        $url = "/api/v1/leads/{$lead->id}/qualification/complete";
+        $this->actingAs($dispatcher);
+
+        $this->postJson($url, $this->answers(['recap_confirmed' => false]))
+            ->assertUnprocessable()->assertJsonValidationErrors('recap_confirmed');
+
+        // Single person: the shared transport answer is mandatory.
+        $this->postJson($url, $this->answers(['passengers_count' => 1, 'shared_transport' => null]))
+            ->assertUnprocessable()->assertJsonValidationErrors('shared_transport');
+
+        // Group of 2: not asked, so not required.
+        $this->postJson($url, $this->answers(['shared_transport' => null, 'shared_direction' => null]))->assertOk();
     }
 
     public function test_b2b_completion_requires_company_details(): void

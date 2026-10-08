@@ -22,7 +22,7 @@ class ScriptManagementTest extends TestCase
         $dispatcher = $this->dispatcher();
         $step = ScriptStep::where('key', 'introduction')->sole();
 
-        $this->actingAs($dispatcher)->getJson('/api/v1/script')->assertOk()->assertJsonCount(14);
+        $this->actingAs($dispatcher)->getJson('/api/v1/script')->assertOk()->assertJsonCount(13);
         $this->actingAs($dispatcher)->putJson("/api/v1/admin/script-steps/{$step->id}", ['title' => 'Hack'])->assertForbidden();
     }
 
@@ -36,6 +36,7 @@ class ScriptManagementTest extends TestCase
             'question' => 'Seriez-vous ouvert au partage ?',
             'prompts' => ['shared_direction' => 'Dans quel sens ?'],
             'options' => ['shared_transport' => ['YES' => 'Oui volontiers']],
+            'responses' => ['shared_transport' => ['NO' => 'Pas de souci, trajet individuel.']],
         ])->assertOk()->assertJsonPath('title', 'Covoiturage organisé');
 
         $step->refresh();
@@ -43,6 +44,7 @@ class ScriptManagementTest extends TestCase
         $labels = collect($step->options['shared_transport'])->pluck('label', 'value');
         $this->assertSame('Oui volontiers', $labels['YES']);
         $this->assertSame('Peut-être', $labels['MAYBE']);
+        $this->assertSame('Pas de souci, trajet individuel.', $step->responses['shared_transport']['NO']);
     }
 
     public function test_admin_cannot_invent_option_values(): void

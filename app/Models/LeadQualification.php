@@ -58,9 +58,11 @@ class LeadQualification extends Model
         'company_size',
         'employees_concerned',
         'trips_per_day',
+        'b2b_same_schedule',
         'decision_maker_name',
         'decision_role',
         'main_priority',
+        'recap_confirmed',
         'wants_quotation',
         'wants_callback',
         'priority_stars',
@@ -98,6 +100,8 @@ class LeadQualification extends Model
             'score_breakdown' => 'array',
             'is_recurring' => 'boolean',
             'is_b2b' => 'boolean',
+            'b2b_same_schedule' => 'boolean',
+            'recap_confirmed' => 'boolean',
             'wants_quotation' => 'boolean',
             'wants_callback' => 'boolean',
             'trips_per_week' => 'integer',
@@ -133,6 +137,14 @@ class LeadQualification extends Model
     {
         return in_array($this->beneficiary, [Beneficiary::EMPLOYEES, Beneficiary::COMPANY], true)
             || $this->transport_need === TransportNeed::EMPLOYEE;
+    }
+
+    /**
+     * Shared transport is only proposed to a single person, outside B2B.
+     */
+    public function sharedApplicable(): bool
+    {
+        return ! $this->detectB2b() && (int) ($this->passengers_count ?? 1) <= 1;
     }
 
     public function isCompleted(): bool
