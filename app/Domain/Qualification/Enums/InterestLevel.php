@@ -13,6 +13,16 @@ enum InterestLevel: string
     case INTERESTED = 'INTERESTED';
     case LOW = 'LOW';
 
+    public function label(): string
+    {
+        return match ($this) {
+            self::HOT => 'HOT',
+            self::WARM => 'WARM',
+            self::INTERESTED => 'Intéressé',
+            self::LOW => 'Faible',
+        };
+    }
+
     public static function fromScore(int $score): self
     {
         $levels = config('qualification.levels');

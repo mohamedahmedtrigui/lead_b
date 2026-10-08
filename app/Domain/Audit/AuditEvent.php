@@ -27,4 +27,31 @@ enum AuditEvent: string
     case USER_DEACTIVATED = 'USER_DEACTIVATED';
     case USER_REACTIVATED = 'USER_REACTIVATED';
     case SCRIPT_UPDATED = 'SCRIPT_UPDATED';
+    case LEAD_REPORT_EXPORTED = 'LEAD_REPORT_EXPORTED';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::LEAD_ASSIGNED => 'Lead assigné',
+            self::LEAD_REASSIGNED => 'Lead réassigné',
+            self::LEAD_UNASSIGNED => 'Lead désassigné',
+            self::LEADS_IMPORTED => 'Import de leads',
+            self::CALL_STARTED => 'Appel démarré',
+            self::CALL_ENDED => 'Appel terminé',
+            self::QUALIFICATION_STARTED => 'Qualification démarrée',
+            self::QUALIFICATION_COMPLETED => 'Qualification terminée',
+            self::STATUS_CHANGED => 'Statut modifié',
+            self::SCORE_CHANGED => 'Score modifié',
+            self::CALLBACK_SCHEDULED => 'Rappel programmé',
+            self::NRP_REGISTERED => 'NRP enregistré',
+            self::NOTE_ADDED => 'Note ajoutée',
+            self::USER_REGISTERED => 'Inscription',
+            self::USER_APPROVED => 'Compte approuvé',
+            self::USER_REJECTED => 'Inscription refusée',
+            self::USER_DEACTIVATED => 'Compte désactivé',
+            self::USER_REACTIVATED => 'Compte réactivé',
+            self::SCRIPT_UPDATED => 'Script modifié',
+            self::LEAD_REPORT_EXPORTED => 'Fiche PDF générée',
+        };
+    }
 }

@@ -14,6 +14,17 @@ enum CallOutcome: string
     case INVALID_NUMBER = 'INVALID_NUMBER';
     case NOT_INTERESTED = 'NOT_INTERESTED';
 
+    public function label(): string
+    {
+        return match ($this) {
+            self::CONNECTED => 'Joint',
+            self::NO_ANSWER => 'Pas de réponse',
+            self::CALLBACK_REQUESTED => 'Rappel demandé',
+            self::INVALID_NUMBER => 'Numéro invalide',
+            self::NOT_INTERESTED => 'Pas intéressé',
+        };
+    }
+
     /**
      * Outcomes meaning the dispatcher actually spoke with the customer.
      *

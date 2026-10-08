@@ -28,6 +28,7 @@ class QualificationService
 
     public function __construct(
         private readonly ScoringService $scoring,
+        private readonly TranscriptBuilder $transcripts,
         private readonly CallService $calls,
         private readonly LeadStatusService $statuses,
         private readonly NoteService $notes,
@@ -77,6 +78,8 @@ class QualificationService
                 $qualification->callback_at = null;
             }
             $this->rescore($qualification, $lead, $dispatcher);
+            // Snapshot of the conversation as it was actually held.
+            $qualification->transcript = $this->transcripts->build($qualification, $lead, $dispatcher);
             $qualification->save();
 
             $this->notes->add($lead, $dispatcher, $qualification->summary_note, DispatcherNote::TYPE_SUMMARY);

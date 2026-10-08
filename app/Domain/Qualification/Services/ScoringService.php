@@ -14,6 +14,18 @@ use App\Models\LeadQualification;
  */
 class ScoringService
 {
+    public const RULE_LABELS = [
+        'daily_transport' => 'Transport quotidien',
+        'recurring_route' => 'Trajet récurrent',
+        'multiple_passengers' => 'Plusieurs passagers',
+        'accepts_shared' => 'Accepte le transport partagé',
+        'maybe_shared' => 'Ouvert au partage (peut-être)',
+        'b2b_need' => 'Besoin entreprise (B2B)',
+        'requests_quotation' => 'Demande un devis',
+        'requests_callback' => 'Demande un rappel',
+        'positive_experience' => 'Expérience MiralDrive positive',
+    ];
+
     /**
      * @return array{score: int, level: InterestLevel, breakdown: array<int, array{rule: string, points: int}>}
      */

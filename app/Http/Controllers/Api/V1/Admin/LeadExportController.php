@@ -101,17 +101,6 @@ class LeadExportController extends Controller
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    private const STATUS_LABELS = [
-        'PENDING' => 'À traiter',
-        'IN_PROGRESS' => 'En cours',
-        'CALLBACK' => 'Rappel',
-        'QUALIFIED' => 'Qualifié',
-        'CONVERTED' => 'Converti',
-        'NRP' => 'NRP',
-        'NOT_INTERESTED' => 'Pas intéressé',
-        'INVALID' => 'Invalide',
-    ];
-
     /** @var array<string, array<string, string>> field => value => label */
     private array $labels = [];
 
@@ -147,7 +136,7 @@ class LeadExportController extends Controller
 
         return match (true) {
             $value === null => '',
-            $field === 'status' => self::STATUS_LABELS[$value->value] ?? $value->value,
+            $value instanceof LeadStatus => $value->label(),
             $value instanceof \BackedEnum => $label($value->value),
             $value instanceof \DateTimeInterface => $value->format('Y-m-d H:i'),
             is_bool($value) => $value ? 'Oui' : 'Non',

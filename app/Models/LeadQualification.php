@@ -98,6 +98,7 @@ class LeadQualification extends Model
             'next_action' => NextAction::class,
             'days_of_week' => 'array',
             'score_breakdown' => 'array',
+            'transcript' => 'array',
             'is_recurring' => 'boolean',
             'is_b2b' => 'boolean',
             'b2b_same_schedule' => 'boolean',

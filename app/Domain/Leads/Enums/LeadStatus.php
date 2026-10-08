@@ -17,6 +17,20 @@ enum LeadStatus: string
     case NOT_INTERESTED = 'NOT_INTERESTED';
     case INVALID = 'INVALID';
 
+    public function label(): string
+    {
+        return match ($this) {
+            self::PENDING => 'À traiter',
+            self::IN_PROGRESS => 'En cours',
+            self::CALLBACK => 'Rappel',
+            self::QUALIFIED => 'Qualifié',
+            self::CONVERTED => 'Converti',
+            self::NRP => 'NRP',
+            self::NOT_INTERESTED => 'Pas intéressé',
+            self::INVALID => 'Invalide',
+        };
+    }
+
     /**
      * Statuses still worked by dispatchers (released back to the pool when a
      * dispatcher is deactivated).

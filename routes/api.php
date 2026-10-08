@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CallController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\LeadController;
+use App\Http\Controllers\Api\V1\LeadReportController;
 use App\Http\Controllers\Api\V1\NoteController;
 use App\Http\Controllers\Api\V1\QualificationController;
 use App\Http\Controllers\Api\V1\ScriptController;
@@ -36,6 +37,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         // Leads (dispatchers only ever see their own, enforced server-side)
         Route::get('leads', [LeadController::class, 'index'])->name('leads.index');
         Route::get('leads/{lead}', [LeadController::class, 'show'])->name('leads.show');
+        Route::get('leads/{lead}/report', LeadReportController::class)->middleware('throttle:reports')->name('leads.report');
         Route::get('leads/{lead}/timeline', [LeadController::class, 'timeline'])->name('leads.timeline');
         Route::get('leads/{lead}/notes', [NoteController::class, 'index'])->name('leads.notes.index');
         Route::post('leads/{lead}/notes', [NoteController::class, 'store'])->name('leads.notes.store');
