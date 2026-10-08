@@ -124,6 +124,83 @@ class LeadAssignmentService
     }
 
     /**
+     * Gives a dispatcher a fixed number of leads without manual selection.
+     *
+     * Only untouched leads are eligible (never called, never qualified), so a
+     * lead in progress or already processed by someone else is never moved.
+     * Unassigned leads are used first; when $rebalance is set, the remainder
+     * is taken from the dispatchers holding the largest untouched backlog.
+     * Leads with a phone number and the oldest ones are served first.
+     *
+     * @return array{requested: int, assigned: int, from_pool: int, from_others: int}
+     */
+    public function allocate(User $dispatcher, int $count, ?User $by, bool $rebalance = true): array
+    {
+        if (! $dispatcher->isDispatcher() || ! $dispatcher->isApproved()) {
+            throw new BusinessRuleException('Les leads ne peuvent être attribués qu\'à un dispatcher actif.');
+        }
+
+        $result = ['requested' => $count, 'assigned' => 0, 'from_pool' => 0, 'from_others' => 0];
+        if ($count < 1) {
+            return $result;
+        }
+
+        return DB::transaction(function () use ($dispatcher, $count, $by, $rebalance, $result) {
+            $ordered = fn ($query) => $query
+                ->orderByRaw('CASE WHEN phone IS NULL THEN 1 ELSE 0 END')
+                ->orderBy('source_created_at')
+                ->orderBy('id')
+                ->lockForUpdate();
+
+            $selected = $ordered(Lead::query()->untouched()->whereNull('assigned_to'))->limit($count)->get()->all();
+            $result['from_pool'] = count($selected);
+
+            $missing = $count - count($selected);
+            if ($missing > 0 && $rebalance) {
+                /** @var array<int, array<int, Lead>> $backlogs dispatcher id => untouched leads */
+                $backlogs = $ordered(Lead::query()->untouched()->whereNotNull('assigned_to')->where('assigned_to', '!=', $dispatcher->id))
+                    ->get()
+                    ->groupBy('assigned_to')
+                    ->map(fn ($leads) => $leads->values()->all())
+                    ->all();
+
+                while ($missing > 0 && $backlogs) {
+                    // Always take from whoever has the biggest untouched backlog.
+                    $sizes = array_map('count', $backlogs);
+                    $owner = array_search(max($sizes), $sizes, true);
+                    $selected[] = array_shift($backlogs[$owner]);
+                    if (! $backlogs[$owner]) {
+                        unset($backlogs[$owner]);
+                    }
+                    $missing--;
+                    $result['from_others']++;
+                }
+            }
+
+            $reason = "Attribution automatique ({$count} lead(s) demandés)";
+            foreach ($selected as $lead) {
+                $this->assign($lead, $dispatcher, $by, AssignmentType::AUTO, $reason);
+            }
+            $result['assigned'] = count($selected);
+
+            return $result;
+        });
+    }
+
+    /**
+     * How many leads an automatic allocation can currently use.
+     *
+     * @return array{unassigned: int, reassignable: int}
+     */
+    public function allocatable(): array
+    {
+        return [
+            'unassigned' => Lead::query()->untouched()->whereNull('assigned_to')->count(),
+            'reassignable' => Lead::query()->untouched()->whereNotNull('assigned_to')->count(),
+        ];
+    }
+
+    /**
      * Strict rotation. The rotation resumes after the dispatcher who received
      * the last automatic assignment, so successive imports stay fair.
      *

@@ -61,9 +61,11 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('dispatchers/{user}/reject', [Admin\DispatcherController::class, 'reject'])->name('dispatchers.reject');
             Route::post('dispatchers/{user}/deactivate', [Admin\DispatcherController::class, 'deactivate'])->name('dispatchers.deactivate');
             Route::post('dispatchers/{user}/reactivate', [Admin\DispatcherController::class, 'reactivate'])->name('dispatchers.reactivate');
+            Route::post('dispatchers/{user}/allocate', [Admin\DispatcherController::class, 'allocate'])->name('dispatchers.allocate');
 
             Route::post('leads/assign', [Admin\LeadManagementController::class, 'assign'])->name('leads.assign');
             Route::post('leads/distribute', [Admin\LeadManagementController::class, 'distribute'])->name('leads.distribute');
+            Route::get('leads/allocatable', [Admin\LeadManagementController::class, 'allocatable'])->name('leads.allocatable');
             Route::get('leads/export', Admin\LeadExportController::class)->name('leads.export');
             Route::get('leads/imports', [Admin\LeadImportController::class, 'index'])->name('leads.imports.index');
             Route::post('leads/imports', [Admin\LeadImportController::class, 'store'])->middleware('throttle:import')->name('leads.imports.store');

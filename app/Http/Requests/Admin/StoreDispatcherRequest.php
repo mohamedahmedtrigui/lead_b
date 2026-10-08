@@ -13,4 +13,15 @@ class StoreDispatcherRequest extends RegisterRequest
     {
         return (bool) $this->user()?->isAdmin();
     }
+
+    public function rules(): array
+    {
+        // Optional automatic allocation of leads to the new account.
+        return [...parent::rules(), ...AllocateLeadsRequest::fields()];
+    }
+
+    public function attributes(): array
+    {
+        return [...parent::attributes(), 'initial_leads' => 'nombre de leads'];
+    }
 }

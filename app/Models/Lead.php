@@ -110,6 +110,20 @@ class Lead extends Model
         return $user->isAdmin() ? $query : $query->where('assigned_to', $user->id);
     }
 
+    /**
+     * Leads nobody has worked on yet: still "PENDING", never called, never
+     * qualified. Only these can be (re)allocated automatically.
+     */
+    public function scopeUntouched(Builder $query): Builder
+    {
+        return $query
+            ->where('status', LeadStatus::PENDING)
+            ->where('nrp_attempts', 0)
+            ->whereNull('last_contacted_at')
+            ->whereDoesntHave('callAttempts')
+            ->whereDoesntHave('qualification');
+    }
+
     public function scopeSearch(Builder $query, ?string $term): Builder
     {
         if (blank($term)) {

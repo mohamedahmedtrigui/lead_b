@@ -68,6 +68,14 @@ class LeadManagementController extends Controller
         ];
     }
 
+    /**
+     * Leads currently usable by an automatic allocation.
+     */
+    public function allocatable(): array
+    {
+        return $this->assignments->allocatable();
+    }
+
     public function updateStatus(UpdateLeadStatusRequest $request, Lead $lead, LeadStatusService $statuses): LeadResource
     {
         $data = $request->validated();

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Domain\Leads\Enums\LeadStatus;
+use App\Domain\Leads\Services\LeadAssignmentService;
 use App\Domain\Users\Enums\UserStatus;
 use App\Domain\Users\Services\DispatcherService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AllocateLeadsRequest;
 use App\Http\Requests\Admin\StoreDispatcherRequest;
 use App\Http\Requests\Admin\UpdateDispatcherRequest;
 use App\Http\Resources\UserResource;
@@ -13,11 +15,15 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class DispatcherController extends Controller
 {
-    public function __construct(private readonly DispatcherService $dispatchers) {}
+    public function __construct(
+        private readonly DispatcherService $dispatchers,
+        private readonly LeadAssignmentService $assignments,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -46,11 +52,21 @@ class DispatcherController extends Controller
         return UserResource::collection($users);
     }
 
+    /**
+     * Creates an approved dispatcher and optionally gives it N untouched leads
+     * straight away (all or nothing, in one transaction).
+     */
     public function store(StoreDispatcherRequest $request): JsonResponse
     {
-        $user = $this->dispatchers->create($request->validated(), $request->user());
+        $data = $request->validated();
 
-        return (new UserResource($user))->response()->setStatusCode(201);
+        [$user, $allocation] = DB::transaction(function () use ($data, $request) {
+            $user = $this->dispatchers->create($data, $request->user());
+
+            return [$user, $this->allocateInitialLeads($user, $data, $request)];
+        });
+
+        return response()->json([...(new UserResource($user))->resolve($request), 'allocation' => $allocation], 201);
     }
 
     public function update(UpdateDispatcherRequest $request, User $user): UserResource
@@ -60,9 +76,39 @@ class DispatcherController extends Controller
         return new UserResource($this->dispatchers->update($user, $request->validated()));
     }
 
-    public function approve(Request $request, User $user): UserResource
+    public function approve(Request $request, User $user): JsonResponse
     {
-        return new UserResource($this->dispatchers->approve($user, $request->user()));
+        $data = $request->validate(AllocateLeadsRequest::fields());
+
+        [$user, $allocation] = DB::transaction(function () use ($user, $data, $request) {
+            $user = $this->dispatchers->approve($user, $request->user());
+
+            return [$user, $this->allocateInitialLeads($user, $data, $request)];
+        });
+
+        return response()->json([...(new UserResource($user))->resolve($request), 'allocation' => $allocation]);
+    }
+
+    /**
+     * Allocates N untouched leads to an active dispatcher, at any time.
+     */
+    public function allocate(AllocateLeadsRequest $request, User $user): array
+    {
+        return $this->allocateInitialLeads($user, $request->validated(), $request);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, int>|null
+     */
+    private function allocateInitialLeads(User $user, array $data, Request $request): ?array
+    {
+        $count = (int) ($data['initial_leads'] ?? 0);
+        if ($count < 1) {
+            return null;
+        }
+
+        return $this->assignments->allocate($user, $count, $request->user(), (bool) ($data['allow_rebalance'] ?? true));
     }
 
     public function reject(Request $request, User $user): UserResource
