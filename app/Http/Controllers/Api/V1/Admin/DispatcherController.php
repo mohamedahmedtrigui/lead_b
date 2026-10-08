@@ -90,6 +90,22 @@ class DispatcherController extends Controller
     }
 
     /**
+     * Safe deletion (archive): see DispatcherService::delete().
+     */
+    public function destroy(Request $request, User $user): array
+    {
+        $data = $request->validate([
+            'open_leads' => ['required', Rule::in([DispatcherService::OPEN_LEADS_REDISTRIBUTE, DispatcherService::OPEN_LEADS_RELEASE])],
+            'transfer_processed_to' => ['nullable', 'integer', 'exists:users,id'],
+            'confirmation' => ['required', 'in:SUPPRIMER'],
+        ], ['confirmation.in' => 'Tapez SUPPRIMER pour confirmer.']);
+
+        $target = isset($data['transfer_processed_to']) ? User::find($data['transfer_processed_to']) : null;
+
+        return $this->dispatchers->delete($user, $request->user(), $data['open_leads'], $target);
+    }
+
+    /**
      * Allocates N untouched leads to an active dispatcher, at any time.
      */
     public function allocate(AllocateLeadsRequest $request, User $user): array

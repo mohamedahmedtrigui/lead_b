@@ -9,6 +9,7 @@ use App\Http\Resources\AuditLogResource;
 use App\Http\Resources\CallAttemptResource;
 use App\Http\Resources\DispatcherNoteResource;
 use App\Http\Resources\LeadAssignmentResource;
+use App\Http\Resources\LeadQualificationSummaryResource;
 use App\Http\Resources\LeadResource;
 use App\Models\Lead;
 use App\Models\LeadQualification;
@@ -30,7 +31,7 @@ class LeadController extends Controller
 
         $query = Lead::query()
             ->visibleTo($user)
-            ->with(['assignee', 'qualification'])
+            ->with(['assignee', 'qualification:'.implode(',', LeadQualificationSummaryResource::COLUMNS)])
             ->search($filters['search'] ?? null)
             ->when($filters['status'] ?? null, fn (Builder $q, $statuses) => $q->whereIn('status', $statuses))
             ->when($filters['channel'] ?? null, fn (Builder $q, $channel) => $q->where('channel', $channel))

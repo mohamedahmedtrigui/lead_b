@@ -33,6 +33,6 @@ class ScriptStep extends Model
 
     public function editor(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'updated_by');
+        return $this->belongsTo(User::class, 'updated_by')->withTrashed();
     }
 }

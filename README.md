@@ -102,6 +102,8 @@ Indexes: `leads.status`, `leads.assigned_to`, `leads.phone`, `(assigned_to, stat
   **404**, so IDs cannot be probed.
 - **Registration** — self-registered dispatchers are `PENDING` and cannot log in
   until approved. Deactivation kills sessions and can release open leads.
+- **Deletion is an archive** (soft delete): calls, notes, qualifications and stats
+  stay attributed to « Nom (supprimé) »; the e-mail is freed for reuse.
 - **Round-robin** — 13 leads / 3 dispatchers → 5 / 4 / 4; the rotation resumes
   after the last dispatcher served. A `balanced` strategy fills the least-loaded first.
 - **NRP** — attempt 1 → NRP, 2 → NRP, 3 → **NRP final**. Attempts must be spaced
@@ -132,7 +134,9 @@ Auth flow for the SPA: `GET /sanctum/csrf-cookie` → `POST /api/v1/auth/login`
 | POST | `/leads/{id}/calls` · `/leads/{id}/calls/outcome` | dispatcher (owner) |
 | PATCH / POST | `/leads/{id}/qualification` · `/leads/{id}/qualification/complete` | dispatcher (owner) |
 | GET | `/admin/dashboard` | admin |
-| GET/POST/PATCH | `/admin/dispatchers`, `/admin/dispatchers/{id}/{approve,reject,deactivate,reactivate}` | admin |
+| GET/POST/PATCH | `/admin/dispatchers`, `/admin/dispatchers/{id}/{approve,reject,deactivate,reactivate,allocate}` | admin |
+| DELETE | `/admin/dispatchers/{id}` — safe deletion (archive; open leads redistributed or released, processed leads kept or transferred; body `confirmation: SUPPRIMER`) | admin |
+| GET | `/leads/{id}/report` — PDF lead file with the full conversation | owner / admin |
 | POST | `/admin/leads/assign`, `/admin/leads/distribute` | admin |
 | PATCH | `/admin/leads/{id}/status` | admin |
 | GET/POST | `/admin/leads/imports` | admin |

@@ -107,9 +107,11 @@ class AdminDashboardService
     {
         $completed = fn (Builder $q) => $q->where('status', QualificationStatus::COMPLETED);
 
-        return User::query()
+        // Archived (deleted) dispatchers stay listed when they have history.
+        return User::withTrashed()
             ->dispatchers()
             ->whereIn('status', [UserStatus::APPROVED, UserStatus::DEACTIVATED])
+            ->where(fn ($q) => $q->whereNull('deleted_at')->orWhereHas('callAttempts')->orWhereHas('assignedLeads'))
             ->withCount([
                 'assignedLeads as assigned',
                 'callAttempts as calls',
@@ -126,6 +128,7 @@ class AdminDashboardService
                 'id' => $u->id,
                 'name' => $u->full_name,
                 'status' => $u->status->value,
+                'deleted' => $u->isArchived(),
                 'assigned' => (int) $u->assigned,
                 'calls' => (int) $u->calls,
                 'connected' => (int) $u->connected,

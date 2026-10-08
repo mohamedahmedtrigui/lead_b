@@ -61,7 +61,7 @@ class Lead extends Model
 
     public function assignee(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'assigned_to');
+        return $this->belongsTo(User::class, 'assigned_to')->withTrashed();
     }
 
     public function qualification(): HasOne

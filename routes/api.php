@@ -63,6 +63,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('dispatchers/{user}/reject', [Admin\DispatcherController::class, 'reject'])->name('dispatchers.reject');
             Route::post('dispatchers/{user}/deactivate', [Admin\DispatcherController::class, 'deactivate'])->name('dispatchers.deactivate');
             Route::post('dispatchers/{user}/reactivate', [Admin\DispatcherController::class, 'reactivate'])->name('dispatchers.reactivate');
+            Route::delete('dispatchers/{user}', [Admin\DispatcherController::class, 'destroy'])->name('dispatchers.destroy');
             Route::post('dispatchers/{user}/allocate', [Admin\DispatcherController::class, 'allocate'])->name('dispatchers.allocate');
 
             Route::post('leads/assign', [Admin\LeadManagementController::class, 'assign'])->name('leads.assign');

@@ -38,7 +38,7 @@ class CallAttempt extends Model
 
     public function dispatcher(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'dispatcher_id');
+        return $this->belongsTo(User::class, 'dispatcher_id')->withTrashed();
     }
 
     public function isOpen(): bool

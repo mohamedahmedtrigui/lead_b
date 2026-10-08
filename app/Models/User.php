@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -16,7 +17,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'first_name',
@@ -39,6 +40,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'approved_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'deleted_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
             'status' => UserStatus::class,
@@ -47,7 +49,17 @@ class User extends Authenticatable
 
     protected function fullName(): Attribute
     {
-        return Attribute::get(fn () => trim("{$this->first_name} {$this->last_name}"));
+        // Archived accounts stay visible in history, flagged as such.
+        return Attribute::get(fn () => trim("{$this->first_name} {$this->last_name}").($this->isArchived() ? ' (supprimé)' : ''));
+    }
+
+    /**
+     * Soft-deleted account. Reads the raw attribute so it also works on
+     * in-memory models that never loaded the column (strict mode).
+     */
+    public function isArchived(): bool
+    {
+        return ($this->attributes['deleted_at'] ?? null) !== null;
     }
 
     public function isAdmin(): bool

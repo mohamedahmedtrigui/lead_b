@@ -26,6 +26,7 @@ enum AuditEvent: string
     case USER_REJECTED = 'USER_REJECTED';
     case USER_DEACTIVATED = 'USER_DEACTIVATED';
     case USER_REACTIVATED = 'USER_REACTIVATED';
+    case USER_DELETED = 'USER_DELETED';
     case SCRIPT_UPDATED = 'SCRIPT_UPDATED';
     case LEAD_REPORT_EXPORTED = 'LEAD_REPORT_EXPORTED';
 
@@ -50,6 +51,7 @@ enum AuditEvent: string
             self::USER_REJECTED => 'Inscription refusée',
             self::USER_DEACTIVATED => 'Compte désactivé',
             self::USER_REACTIVATED => 'Compte réactivé',
+            self::USER_DELETED => 'Compte supprimé (archivé)',
             self::SCRIPT_UPDATED => 'Script modifié',
             self::LEAD_REPORT_EXPORTED => 'Fiche PDF générée',
         };

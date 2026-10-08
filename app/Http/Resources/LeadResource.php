@@ -50,9 +50,12 @@ class LeadResource extends JsonResource
             'callback_at' => $this->callback_at?->toIso8601String(),
             'converted_at' => $this->converted_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
-            'qualification' => $this->whenLoaded('qualification', fn () => $this->qualification
-                ? new LeadQualificationResource($this->qualification)
-                : null),
+            // Lists get a compact summary; the detail gets every answer.
+            'qualification' => $this->whenLoaded('qualification', fn () => match (true) {
+                $this->qualification === null => null,
+                $request->routeIs('api.v1.leads.index') => new LeadQualificationSummaryResource($this->qualification),
+                default => new LeadQualificationResource($this->qualification),
+            }),
             'open_call' => $this->whenLoaded('openCall', fn () => $this->openCall
                 ? new CallAttemptResource($this->openCall)
                 : null),

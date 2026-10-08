@@ -23,6 +23,7 @@ class UserResource extends JsonResource
             'approved_at' => $this->approved_at?->toIso8601String(),
             'last_login_at' => $this->last_login_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
+            'deleted' => $this->isArchived(),
             'open_leads_count' => $this->whenCounted('open_leads'),
             'assigned_leads_count' => $this->whenCounted('assigned_leads'),
         ];

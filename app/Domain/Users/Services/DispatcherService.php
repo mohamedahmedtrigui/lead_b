@@ -119,6 +119,80 @@ class DispatcherService
         });
     }
 
+    public const OPEN_LEADS_REDISTRIBUTE = 'redistribute';
+
+    public const OPEN_LEADS_RELEASE = 'release';
+
+    /**
+     * Safe deletion: the account is archived (soft delete) so nothing it did
+     * is lost — calls, notes, qualifications and audit stay attributed to it.
+     *
+     * - open leads (to do, in progress, callback, NRP) are redistributed
+     *   round-robin to the other active dispatchers, or released to the pool;
+     * - processed leads stay attributed to the archived account, or are
+     *   transferred to $transferProcessedTo when given;
+     * - sessions and tokens are revoked and the e-mail is freed.
+     *
+     * @return array{open_leads: int, redistributed: int, released: int, processed_leads: int, processed_transferred: int}
+     */
+    public function delete(User $user, User $by, string $openLeads = self::OPEN_LEADS_REDISTRIBUTE, ?User $transferProcessedTo = null): array
+    {
+        $this->ensureDispatcher($user);
+
+        if ($transferProcessedTo && ($transferProcessedTo->is($user) || ! $transferProcessedTo->isDispatcher() || ! $transferProcessedTo->isApproved())) {
+            throw new BusinessRuleException('Les leads traités ne peuvent être transférés qu\'à un autre dispatcher actif.');
+        }
+
+        return DB::transaction(function () use ($user, $by, $openLeads, $transferProcessedTo) {
+            $reason = "Suppression du compte {$user->full_name}";
+            $open = Lead::query()->where('assigned_to', $user->id)->whereIn('status', LeadStatus::open())->orderBy('id')->get();
+            $processed = Lead::query()->where('assigned_to', $user->id)->whereNotIn('status', LeadStatus::open())->get();
+
+            $result = [
+                'open_leads' => $open->count(),
+                'redistributed' => 0,
+                'released' => 0,
+                'processed_leads' => $processed->count(),
+                'processed_transferred' => 0,
+            ];
+
+            // Others first, so the deleted account is not part of the rotation.
+            $user->status = UserStatus::DEACTIVATED;
+            $user->save();
+
+            $others = User::query()->activeDispatchers()->whereKeyNot($user->id)->get();
+            if ($openLeads === self::OPEN_LEADS_REDISTRIBUTE && $others->isNotEmpty() && $open->isNotEmpty()) {
+                $this->assignments->distribute($open, $others, $by);
+                $result['redistributed'] = $open->count();
+            } else {
+                foreach ($open as $lead) {
+                    $this->assignments->assign($lead, null, $by, AssignmentType::UNASSIGN, $reason);
+                }
+                $result['released'] = $open->count();
+            }
+
+            if ($transferProcessedTo) {
+                foreach ($processed as $lead) {
+                    $this->assignments->assign($lead, $transferProcessedTo, $by, AssignmentType::MANUAL, $reason);
+                }
+                $result['processed_transferred'] = $processed->count();
+            }
+
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+            $user->tokens()->delete();
+
+            // Free the e-mail address (unique) while keeping the name for history.
+            $originalEmail = $user->email;
+            $user->email = "deleted-{$user->id}-".now()->timestamp.'@archive.invalid';
+            $user->save();
+            $user->delete();
+
+            $this->audit->log(AuditEvent::USER_DELETED, null, $user, ['email' => $originalEmail, ...$result], $by);
+
+            return $result;
+        });
+    }
+
     public function reactivate(User $user, User $by): User
     {
         $this->ensureDispatcher($user);
