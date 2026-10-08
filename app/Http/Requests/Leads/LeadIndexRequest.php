@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
 
 class LeadIndexRequest extends FormRequest
 {
-    public const SORTABLE = ['id', 'name', 'status', 'source_created_at', 'last_contacted_at', 'callback_at', 'interest_score', 'priority_stars'];
+    public const SORTABLE = ['priority', 'id', 'name', 'status', 'source_created_at', 'last_contacted_at', 'callback_at', 'interest_score', 'priority_stars'];
 
     public function rules(): array
     {

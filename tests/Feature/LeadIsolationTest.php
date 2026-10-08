@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Leads\Enums\LeadStatus;
 use App\Models\Lead;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -21,6 +22,32 @@ class LeadIsolationTest extends TestCase
         $this->actingAs($alice)->getJson('/api/v1/leads?assigned_to=none')
             ->assertOk()
             ->assertJsonCount(3, 'data');
+    }
+
+    public function test_leads_are_sorted_by_status_importance_by_default(): void
+    {
+        $dispatcher = $this->dispatcher();
+        $make = fn (LeadStatus $status, array $extra = []) => tap(
+            Lead::factory()->assignedTo($dispatcher->id)->create(),
+            fn (Lead $lead) => $lead->forceFill(['status' => $status, ...$extra])->save(),
+        );
+
+        $make(LeadStatus::QUALIFIED);
+        $make(LeadStatus::INVALID);
+        $make(LeadStatus::CALLBACK, ['callback_at' => now()->addDays(2)]);
+        $make(LeadStatus::IN_PROGRESS);
+        $make(LeadStatus::CALLBACK, ['callback_at' => now()->addHour()]);
+        $make(LeadStatus::NRP);
+        $make(LeadStatus::PENDING);
+
+        $rows = $this->actingAs($dispatcher)->getJson('/api/v1/leads')->assertOk()->json('data');
+
+        $this->assertSame(
+            ['PENDING', 'IN_PROGRESS', 'CALLBACK', 'CALLBACK', 'NRP', 'QUALIFIED', 'INVALID'],
+            array_column($rows, 'status'),
+        );
+        // Soonest callback first.
+        $this->assertLessThan($rows[3]['callback_at'], $rows[2]['callback_at']);
     }
 
     public function test_dispatcher_cannot_access_another_dispatchers_lead_by_id(): void

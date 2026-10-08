@@ -29,6 +29,26 @@ enum LeadStatus: string
     }
 
     /**
+     * Display order of lead lists, from the most important to work on to
+     * the least (closed leads last).
+     *
+     * @return array<int, self>
+     */
+    public static function byImportance(): array
+    {
+        return [
+            self::PENDING,
+            self::IN_PROGRESS,
+            self::CALLBACK,
+            self::NRP,
+            self::QUALIFIED,
+            self::CONVERTED,
+            self::NOT_INTERESTED,
+            self::INVALID,
+        ];
+    }
+
+    /**
      * Statuses on which a dispatcher can no longer start a call.
      */
     public function isClosedForDispatcher(): bool
