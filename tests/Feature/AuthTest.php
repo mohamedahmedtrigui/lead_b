@@ -27,6 +27,23 @@ class AuthTest extends TestCase
         $this->assertTrue($user->isDispatcher());
     }
 
+    public function test_password_only_requires_8_characters(): void
+    {
+        $payload = fn (string $password) => [
+            'first_name' => 'Ali',
+            'last_name' => 'Ben Salah',
+            'email' => uniqid().'@example.com',
+            'phone' => '+21622333444',
+            'password' => $password,
+            'password_confirmation' => $password,
+        ];
+
+        $this->spa()->postJson('/api/v1/auth/register', $payload('123456789'))->assertCreated();
+        $this->spa()->postJson('/api/v1/auth/register', $payload('1234567'))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('password');
+    }
+
     public function test_pending_dispatcher_cannot_log_in(): void
     {
         $user = $this->dispatcher(UserStatus::PENDING);

@@ -22,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
         Model::shouldBeStrict(! $this->app->isProduction());
         JsonResource::withoutWrapping();
 
-        Password::defaults(fn () => Password::min(8)->letters()->mixedCase()->numbers());
+        Password::defaults(fn () => Password::min(8));
 
         $this->configureRateLimiting();
     }
