@@ -11,7 +11,9 @@ use App\Domain\Leads\Services\NoteService;
 use App\Domain\Qualification\Enums\NextAction;
 use App\Domain\Qualification\Enums\PreviousExperience;
 use App\Domain\Qualification\Enums\QualificationStatus;
+use App\Domain\Qualification\Enums\SharedDirection;
 use App\Domain\Qualification\Enums\SharedTransport;
+use App\Domain\Qualification\Enums\TripType;
 use App\Models\DispatcherNote;
 use App\Models\Lead;
 use App\Models\LeadQualification;
@@ -158,6 +160,9 @@ class QualificationService
 
         if ($q->shared_transport !== SharedTransport::YES) {
             $q->shared_direction = null;
+        } elseif ($q->trip_type !== TripType::ROUND_TRIP) {
+            // No return leg: the trip can only be shared on the way out.
+            $q->shared_direction = SharedDirection::OUTBOUND;
         }
 
         if ($q->used_miraldrive !== PreviousExperience::YES) {

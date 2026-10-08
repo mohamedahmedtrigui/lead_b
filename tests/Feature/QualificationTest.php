@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Domain\Calls\Enums\CallOutcome;
 use App\Domain\Leads\Enums\LeadStatus;
+use App\Domain\Scripts\ScriptService;
 use App\Models\CallAttempt;
 use App\Models\Lead;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -130,6 +131,36 @@ class QualificationTest extends TestCase
 
         // Group of 2: not asked, so not required.
         $this->postJson($url, $this->answers(['shared_transport' => null, 'shared_direction' => null]))->assertOk();
+    }
+
+    public function test_passengers_are_capped_at_4(): void
+    {
+        $dispatcher = $this->dispatcher();
+        $lead = Lead::factory()->assignedTo($dispatcher->id)->create();
+
+        $this->actingAs($dispatcher)->patchJson("/api/v1/leads/{$lead->id}/qualification", ['passengers_count' => 5])
+            ->assertUnprocessable()->assertJsonValidationErrors('passengers_count');
+        $this->actingAs($dispatcher)->patchJson("/api/v1/leads/{$lead->id}/qualification", ['passengers_count' => 4])
+            ->assertOk();
+    }
+
+    public function test_one_way_trip_is_only_shared_on_the_outbound_leg(): void
+    {
+        app(ScriptService::class)->syncDefaults();
+        $dispatcher = $this->dispatcher();
+        $lead = Lead::factory()->assignedTo($dispatcher->id)->create();
+
+        // No direction needed (nor kept) for a one-way trip shared by a single person.
+        $this->actingAs($dispatcher)->postJson("/api/v1/leads/{$lead->id}/qualification/complete", $this->answers([
+            'trip_type' => 'ONE_WAY',
+            'return_time' => null,
+            'passengers_count' => 1,
+            'shared_transport' => 'YES',
+            'shared_direction' => 'BOTH',
+        ]))->assertOk()->assertJsonPath('qualification.shared_direction', 'OUTBOUND');
+
+        $transcript = collect($lead->qualification()->first()->transcript)->keyBy('key');
+        $this->assertNull($transcript['shared']['reply']);
     }
 
     public function test_b2b_completion_requires_company_details(): void

@@ -114,12 +114,25 @@ class TranscriptBuilder
                 ))),
                 'question' => $this->fill($step->question, $context),
                 'answer' => $answer,
-                'reply' => $this->fill($step->responses[$main][$this->replyKey($q->{$main})] ?? null, $context),
+                'reply' => $this->replyApplies($key, $q)
+                    ? $this->fill($step->responses[$main][$this->replyKey($q->{$main})] ?? null, $context)
+                    : null,
                 'details' => $details,
             ];
         }
 
         return $entries;
+    }
+
+    /**
+     * The "Oui" reply of the shared step asks aller / retour / les deux:
+     * not said for a one-way trip.
+     */
+    private function replyApplies(string $key, LeadQualification $q): bool
+    {
+        return ! ($key === 'shared'
+            && $q->shared_transport === SharedTransport::YES
+            && $q->trip_type !== TripType::ROUND_TRIP);
     }
 
     private function visible(?string $condition, LeadQualification $q): bool

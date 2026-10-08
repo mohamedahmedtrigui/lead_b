@@ -52,7 +52,8 @@ class QualificationRules
             'frequency' => $enum(Frequency::class),
             'trips_per_week' => $int(0, 100),
             'is_recurring' => ['nullable', 'boolean'],
-            'passengers_count' => $int(1, 500),
+            // A single vehicle: 4 passengers max (larger groups go through B2B fields).
+            'passengers_count' => $int(1, 4),
             'total_employees' => $int(0, 1000000),
             'estimated_passengers_per_trip' => $int(1, 1000),
             'shared_transport' => $enum(SharedTransport::class),
@@ -130,7 +131,9 @@ class QualificationRules
             $rules['days_of_week'] = ['required', 'array', 'min:1', 'max:7'];
         }
 
-        if ($sharedApplicable && ($input['shared_transport'] ?? null) === SharedTransport::YES->value) {
+        // One-way trips can only be shared on the outbound leg (set automatically).
+        if ($sharedApplicable && ($input['shared_transport'] ?? null) === SharedTransport::YES->value
+            && ($input['trip_type'] ?? null) === TripType::ROUND_TRIP->value) {
             $require('shared_direction');
         }
 
