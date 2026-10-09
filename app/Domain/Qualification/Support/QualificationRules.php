@@ -2,12 +2,14 @@
 
 namespace App\Domain\Qualification\Support;
 
+use App\Domain\Qualification\Enums\AppIssue;
 use App\Domain\Qualification\Enums\Beneficiary;
 use App\Domain\Qualification\Enums\CallAvailability;
 use App\Domain\Qualification\Enums\CurrentProvider;
 use App\Domain\Qualification\Enums\DecisionRole;
 use App\Domain\Qualification\Enums\Frequency;
 use App\Domain\Qualification\Enums\NextAction;
+use App\Domain\Qualification\Enums\OtherApp;
 use App\Domain\Qualification\Enums\PreviousExperience;
 use App\Domain\Qualification\Enums\PurchaseDriver;
 use App\Domain\Qualification\Enums\SharedDirection;
@@ -46,7 +48,19 @@ class QualificationRules
             'destination' => $text(),
             'trip_type' => $enum(TripType::class),
             'departure_time' => $time,
+            'arrival_time' => $time,
             'return_time' => $time,
+            // Extra routes / schedules: free-form on purpose (too specific to validate).
+            'extra_routes' => ['nullable', 'array', 'max:30'],
+            'extra_routes.*' => ['array'],
+            'extra_routes.*.label' => $text(),
+            'extra_routes.*.departure' => $text(),
+            'extra_routes.*.destination' => $text(),
+            'extra_routes.*.days' => ['nullable', 'array', 'max:7'],
+            'extra_routes.*.days.*' => [Rule::enum(Weekday::class)],
+            'extra_routes.*.arrival_time' => $time,
+            'extra_routes.*.return_time' => $time,
+            'extra_routes.*.note' => $text(500),
             'days_of_week' => ['nullable', 'array', 'max:7'],
             'days_of_week.*' => ['distinct', Rule::enum(Weekday::class)],
             'frequency' => $enum(Frequency::class),
@@ -62,6 +76,12 @@ class QualificationRules
             'experience_rating' => $int(1, 5),
             'experience_feedback' => $text(2000),
             'improvement_request' => $text(2000),
+            'other_apps_used' => ['nullable', 'boolean'],
+            'other_apps' => ['nullable', 'array'],
+            'other_apps.*' => ['distinct', Rule::enum(OtherApp::class)],
+            'other_apps_issues' => ['nullable', 'array'],
+            'other_apps_issues.*' => ['distinct', Rule::enum(AppIssue::class)],
+            'other_apps_feedback' => $text(2000),
             'current_provider' => $enum(CurrentProvider::class),
             'current_provider_details' => $text(),
             'customer_preference' => $text(2000),
@@ -111,7 +131,12 @@ class QualificationRules
         $isB2b = in_array($input['beneficiary'] ?? null, [Beneficiary::EMPLOYEES->value, Beneficiary::COMPANY->value], true)
             || ($input['transport_need'] ?? null) === TransportNeed::EMPLOYEE->value;
 
-        foreach (['beneficiary', 'transport_need', 'departure', 'destination', 'trip_type', 'frequency',
+        // "Pour lui-même" = B2C, the trip type is set automatically (level 3 skipped).
+        if (($input['beneficiary'] ?? null) !== Beneficiary::SELF->value) {
+            $require('transport_need');
+        }
+
+        foreach (['beneficiary', 'departure', 'destination', 'trip_type', 'frequency',
             'used_miraldrive', 'current_provider', 'priority_stars'] as $field) {
             $require($field);
         }
@@ -163,6 +188,7 @@ class QualificationRules
             'destination' => 'destination',
             'trip_type' => 'type de trajet',
             'departure_time' => 'heure de départ',
+            'arrival_time' => 'heure d’arrivée',
             'return_time' => 'heure de retour',
             'days_of_week' => 'jours de la semaine',
             'frequency' => 'fréquence',

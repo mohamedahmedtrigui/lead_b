@@ -133,6 +133,74 @@ class QualificationTest extends TestCase
         $this->postJson($url, $this->answers(['shared_transport' => null, 'shared_direction' => null]))->assertOk();
     }
 
+    public function test_self_skips_level_3_and_is_b2c(): void
+    {
+        $dispatcher = $this->dispatcher();
+        $lead = Lead::factory()->assignedTo($dispatcher->id)->create();
+        $url = "/api/v1/leads/{$lead->id}/qualification/complete";
+        $this->actingAs($dispatcher);
+
+        // "Autre personne" without the level 3 answer is refused.
+        $this->postJson($url, $this->answers(['beneficiary' => 'OTHER', 'transport_need' => null]))
+            ->assertUnprocessable()->assertJsonValidationErrors('transport_need');
+
+        // "Pour lui-même": no level 3, the trip is personal (B2C).
+        $this->postJson($url, $this->answers(['beneficiary' => 'SELF', 'transport_need' => null]))
+            ->assertOk()
+            ->assertJsonPath('qualification.transport_need', 'PERSONAL')
+            ->assertJsonPath('qualification.is_b2b', false);
+    }
+
+    public function test_extra_routes_are_free_form_and_kept(): void
+    {
+        $dispatcher = $this->dispatcher();
+        $lead = Lead::factory()->assignedTo($dispatcher->id)->create();
+
+        $routes = [
+            ['label' => 'Ali', 'departure' => 'Sakiet Ezzit', 'destination' => 'Usine', 'days' => ['MON', 'TUE'], 'arrival_time' => '07:45', 'return_time' => '16:30', 'note' => null],
+            ['label' => 'Samedi', 'departure' => null, 'destination' => null, 'days' => ['SAT'], 'arrival_time' => '10:00', 'return_time' => null, 'note' => 'horaire réduit'],
+        ];
+
+        $this->actingAs($dispatcher)->patchJson("/api/v1/leads/{$lead->id}/qualification", [
+            'arrival_time' => '08:00',
+            'extra_routes' => $routes,
+        ])->assertOk()
+            ->assertJsonPath('arrival_time', '08:00')
+            ->assertJsonPath('extra_routes.0.label', 'Ali')
+            ->assertJsonPath('extra_routes.1.days.0', 'SAT');
+    }
+
+    public function test_other_apps_answers_only_kept_when_travelling_by_app(): void
+    {
+        app(ScriptService::class)->syncDefaults();
+        $dispatcher = $this->dispatcher();
+        $lead = Lead::factory()->assignedTo($dispatcher->id)->create();
+        $this->actingAs($dispatcher);
+
+        $this->postJson("/api/v1/leads/{$lead->id}/qualification/complete", $this->answers([
+            'current_provider' => 'APPLICATION',
+            'other_apps' => ['BOLT', 'YASSIR'],
+            'other_apps_issues' => ['PRICE', 'CANCELLATIONS'],
+            'other_apps_feedback' => 'Trop cher le matin',
+        ]))->assertOk()
+            ->assertJsonPath('qualification.other_apps_used', true)
+            ->assertJsonPath('qualification.other_apps', ['BOLT', 'YASSIR']);
+
+        $transcript = collect($lead->qualification()->first()->transcript)->keyBy('key');
+        $details = collect($transcript['experience']['details'])->pluck(1)->join(' | ');
+        $this->assertStringContainsString('Bolt, Yassir', $details);
+        $this->assertStringContainsString('Trop cher le matin', $details);
+
+        // Switching to a taxi drops the app answers.
+        $lead2 = Lead::factory()->assignedTo($dispatcher->id)->create();
+        $this->postJson("/api/v1/leads/{$lead2->id}/qualification/complete", $this->answers([
+            'current_provider' => 'TRADITIONAL_TAXI',
+            'other_apps' => ['BOLT'],
+        ]))->assertOk()
+            ->assertJsonPath('qualification.other_apps_used', false)
+            ->assertJsonPath('qualification.other_apps', null);
+    }
+
     public function test_passengers_are_capped_at_4(): void
     {
         $dispatcher = $this->dispatcher();

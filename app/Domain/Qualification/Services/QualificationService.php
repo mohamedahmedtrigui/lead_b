@@ -8,11 +8,14 @@ use App\Domain\Calls\Enums\CallOutcome;
 use App\Domain\Calls\Services\CallService;
 use App\Domain\Leads\Services\LeadStatusService;
 use App\Domain\Leads\Services\NoteService;
+use App\Domain\Qualification\Enums\Beneficiary;
+use App\Domain\Qualification\Enums\CurrentProvider;
 use App\Domain\Qualification\Enums\NextAction;
 use App\Domain\Qualification\Enums\PreviousExperience;
 use App\Domain\Qualification\Enums\QualificationStatus;
 use App\Domain\Qualification\Enums\SharedDirection;
 use App\Domain\Qualification\Enums\SharedTransport;
+use App\Domain\Qualification\Enums\TransportNeed;
 use App\Domain\Qualification\Enums\TripType;
 use App\Models\DispatcherNote;
 use App\Models\Lead;
@@ -49,6 +52,7 @@ class QualificationService
         return DB::transaction(function () use ($lead, $dispatcher, $answers) {
             $qualification = $this->findOrStart($lead, $dispatcher);
             $qualification->fill($answers);
+            $this->applyBeneficiary($qualification);
             $qualification->dispatcher_id = $dispatcher->id;
             $this->rescore($qualification, $lead, $dispatcher);
             $qualification->save();
@@ -70,6 +74,7 @@ class QualificationService
         return DB::transaction(function () use ($lead, $dispatcher, $answers) {
             $qualification = $this->findOrStart($lead, $dispatcher);
             $qualification->fill($answers);
+            $this->applyBeneficiary($qualification);
             $this->clearIrrelevantAnswers($qualification);
 
             $nextAction = $qualification->next_action;
@@ -149,6 +154,23 @@ class QualificationService
     }
 
     /**
+     * Level 2 "Pour lui-même": B2C personal trip, level 3 is skipped.
+     */
+    private function applyBeneficiary(LeadQualification $q): void
+    {
+        if ($q->beneficiary === Beneficiary::SELF) {
+            $q->transport_need = TransportNeed::PERSONAL;
+        } elseif ($q->transport_need === TransportNeed::PERSONAL) {
+            $q->transport_need = null;
+        }
+
+        // The "other apps" questions are asked when the client travels by app today.
+        if ($q->current_provider !== null) {
+            $q->other_apps_used = $q->current_provider === CurrentProvider::APPLICATION;
+        }
+    }
+
+    /**
      * Drops answers of branches that no longer apply (e.g. B2B details when
      * the transport is finally for the customer himself).
      */
@@ -163,6 +185,12 @@ class QualificationService
         } elseif ($q->trip_type !== TripType::ROUND_TRIP) {
             // No return leg: the trip can only be shared on the way out.
             $q->shared_direction = SharedDirection::OUTBOUND;
+        }
+
+        if ($q->other_apps_used !== true) {
+            $q->other_apps = null;
+            $q->other_apps_issues = null;
+            $q->other_apps_feedback = null;
         }
 
         if ($q->used_miraldrive !== PreviousExperience::YES) {

@@ -22,7 +22,7 @@ class ScriptManagementTest extends TestCase
         $dispatcher = $this->dispatcher();
         $step = ScriptStep::where('key', 'introduction')->sole();
 
-        $this->actingAs($dispatcher)->getJson('/api/v1/script')->assertOk()->assertJsonCount(13);
+        $this->actingAs($dispatcher)->getJson('/api/v1/script')->assertOk()->assertJsonCount(12);
         $this->actingAs($dispatcher)->putJson("/api/v1/admin/script-steps/{$step->id}", ['title' => 'Hack'])->assertForbidden();
     }
 

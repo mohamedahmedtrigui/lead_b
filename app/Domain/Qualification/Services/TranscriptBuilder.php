@@ -2,6 +2,7 @@
 
 namespace App\Domain\Qualification\Services;
 
+use App\Domain\Qualification\Enums\Beneficiary;
 use App\Domain\Qualification\Enums\SharedTransport;
 use App\Domain\Qualification\Enums\TripType;
 use App\Models\Lead;
@@ -28,13 +29,15 @@ class TranscriptBuilder
     private const STEPS = [
         'introduction' => ['main' => 'call_availability', 'details' => []],
         'beneficiary' => ['main' => 'beneficiary', 'details' => ['beneficiary_details']],
-        'need' => ['main' => 'transport_need', 'details' => ['transport_need_details']],
-        'route' => ['main' => 'departure', 'details' => ['destination', 'trip_type', 'departure_time', 'return_time',
+        'need' => ['main' => 'transport_need', 'details' => ['transport_need_details'], 'when' => 'other_person'],
+        'route' => ['main' => 'departure', 'details' => ['destination', 'trip_type', 'departure_time', 'arrival_time', 'return_time', 'extra_routes',
             'frequency', 'days_of_week', 'trips_per_day', 'trips_per_week', 'is_recurring']],
         'passengers' => ['main' => 'passengers_count', 'details' => ['total_employees', 'estimated_passengers_per_trip']],
         'shared' => ['main' => 'shared_transport', 'details' => ['shared_direction'], 'when' => 'shared'],
-        'experience' => ['main' => 'used_miraldrive', 'details' => ['experience_rating', 'experience_feedback', 'improvement_request']],
-        'current_solution' => ['main' => 'pain_point', 'details' => ['current_provider', 'current_provider_details', 'customer_preference']],
+        // Experience + current solution (merged step).
+        'experience' => ['main' => 'used_miraldrive', 'details' => ['experience_rating', 'experience_feedback', 'improvement_request',
+            'current_provider', 'current_provider_details', 'other_apps', 'other_apps_issues', 'other_apps_feedback',
+            'pain_point', 'customer_preference']],
         'b2b' => ['main' => 'decision_role', 'details' => ['company_name', 'company_size', 'employees_concerned',
             'trips_per_day', 'b2b_same_schedule', 'decision_maker_name'], 'when' => 'b2b'],
         'recap' => ['main' => 'recap_confirmed', 'details' => []],
@@ -49,6 +52,12 @@ class TranscriptBuilder
         'destination' => 'Destination',
         'trip_type' => 'Type de trajet',
         'departure_time' => 'Heure de départ',
+        'arrival_time' => 'Heure d’arrivée exacte',
+        'extra_routes' => 'Autres trajets / horaires',
+        'other_apps_used' => 'Autres applications utilisées',
+        'other_apps' => 'Applications',
+        'other_apps_issues' => 'Problèmes rencontrés',
+        'other_apps_feedback' => 'Avis du client',
         'return_time' => 'Heure de retour',
         'frequency' => 'Fréquence',
         'days_of_week' => 'Jours',
@@ -140,6 +149,7 @@ class TranscriptBuilder
         return match ($condition) {
             'shared' => $q->sharedApplicable(),
             'b2b' => $q->detectB2b(),
+            'other_person' => $q->beneficiary !== Beneficiary::SELF,
             default => true,
         };
     }
@@ -167,16 +177,50 @@ class TranscriptBuilder
     {
         $label = fn (string $raw) => $labels[$field][$raw] ?? $raw;
 
+        if ($field === 'extra_routes') {
+            return $this->formatRoutes($value ?? [], $labels);
+        }
+
         return match (true) {
             $value === null, $value === '', $value === [] => null,
             $value instanceof \BackedEnum => $label($value->value),
             $value instanceof CarbonInterface => $value->copy()->timezone(config('leads.import.timezone'))->format('d/m/Y à H:i'),
             is_bool($value) => isset($labels[$field]) ? $label($value ? 'YES' : 'NO') : ($value ? 'Oui' : 'Non'),
             is_array($value) => implode(', ', array_map($label, $value)),
-            in_array($field, ['departure_time', 'return_time'], true) => $this->hour((string) $value),
+            in_array($field, ['departure_time', 'arrival_time', 'return_time'], true) => $this->hour((string) $value),
             $field === 'experience_rating' => $value.' / 5',
             default => (string) $value,
         };
+    }
+
+    /**
+     * "Ali : Sfax → Centre-ville · Lun, Mar · arrivée 08h00 · retour 17h00 (note)"
+     *
+     * @param  array<int, array<string, mixed>>  $routes
+     * @param  array<string, array<string, string>>  $labels
+     */
+    private function formatRoutes(array $routes, array $labels): ?string
+    {
+        $lines = [];
+        foreach ($routes as $route) {
+            $days = implode(', ', array_map(fn ($d) => $labels['days_of_week'][$d] ?? $d, $route['days'] ?? []));
+            $path = trim(($route['departure'] ?? '').' → '.($route['destination'] ?? ''), ' →');
+            $parts = array_filter([
+                $path ?: null,
+                $days ?: null,
+                ! empty($route['arrival_time']) ? 'arrivée '.$this->hour($route['arrival_time']) : null,
+                ! empty($route['return_time']) ? 'retour '.$this->hour($route['return_time']) : null,
+            ]);
+            $line = (filled($route['label'] ?? null) ? $route['label'].' : ' : '').implode(' · ', $parts);
+            if (filled($route['note'] ?? null)) {
+                $line .= ' ('.$route['note'].')';
+            }
+            if (trim($line) !== '') {
+                $lines[] = $line;
+            }
+        }
+
+        return $lines ? implode("\n", $lines) : null;
     }
 
     private function replyKey(mixed $value): ?string
@@ -208,7 +252,7 @@ class TranscriptBuilder
         $days = implode(', ', array_map(fn ($d) => $labels['days_of_week'][$d] ?? $d, $q->days_of_week ?? []));
         $frequency = trim(Str::lower((string) $label('frequency', $q->frequency)).($days ? " ({$days})" : ''));
         $schedule = implode(', ', array_filter([
-            $this->hour($q->departure_time),
+            $q->arrival_time ? 'arrivée '.$this->hour($q->arrival_time) : $this->hour($q->departure_time),
             $q->trip_type === TripType::ROUND_TRIP && $q->return_time ? 'retour '.$this->hour($q->return_time) : null,
         ]));
         $passengers = $b2b ? $q->estimated_passengers_per_trip : $q->passengers_count;

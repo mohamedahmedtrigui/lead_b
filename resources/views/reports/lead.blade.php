@@ -132,7 +132,7 @@
             @if (count($entry['details']))
                 <table class="grid" style="margin-top:4px">
                     @foreach ($entry['details'] as [$label, $value])
-                        <tr><td class="k">{{ $label }}</td><td class="v">{{ $value }}</td></tr>
+                        <tr><td class="k">{{ $label }}</td><td class="v">{!! nl2br(e($value)) !!}</td></tr>
                     @endforeach
                 </table>
             @endif

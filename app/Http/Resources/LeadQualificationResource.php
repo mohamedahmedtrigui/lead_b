@@ -20,6 +20,7 @@ class LeadQualificationResource extends JsonResource
         // HH:MM for <input type="time">, ISO 8601 for dates.
         $answers['departure_time'] = $this->departure_time ? substr($this->departure_time, 0, 5) : null;
         $answers['return_time'] = $this->return_time ? substr($this->return_time, 0, 5) : null;
+        $answers['arrival_time'] = $this->arrival_time ? substr($this->arrival_time, 0, 5) : null;
         $answers['callback_at'] = $this->callback_at?->toIso8601String();
 
         return [
