@@ -210,9 +210,7 @@ class DefaultScript
                 'question' => 'W enti, est-ce que enti الشخص elli ya5ou el décision بالنسبة lel service hedha ?',
                 'prompts' => [
                     'company_name' => 'Chnowa esm el société ?',
-                    'company_size' => 'Taille de l’entreprise (salariés)',
-                    'employees_concerned' => '9addeh men employé تقريباً يكون معني بالنقل ?',
-                    'trips_per_day' => '9addeh men trajet تقريباً تستحقو fi nhar ?',
+                    'company_size' => 'Taille de l’entreprise (nombre de salariés, texte libre)',
                     'b2b_same_schedule' => 'Les trajets يكونو généralement fi nafs el horaire ?',
                     'decision_maker_name' => 'Personne à contacter',
                 ],

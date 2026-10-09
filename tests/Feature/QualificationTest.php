@@ -201,6 +201,21 @@ class QualificationTest extends TestCase
             ->assertJsonPath('qualification.other_apps', null);
     }
 
+    public function test_company_size_is_free_text(): void
+    {
+        $dispatcher = $this->dispatcher();
+        $lead = Lead::factory()->assignedTo($dispatcher->id)->create();
+
+        $this->actingAs($dispatcher)->patchJson("/api/v1/leads/{$lead->id}/qualification", [
+            'beneficiary' => 'OTHER',
+            'transport_need' => 'EMPLOYEE',
+            'company_name' => 'Poulina',
+            'company_size' => 'environ 50',
+        ])->assertOk()
+            ->assertJsonPath('is_b2b', true)
+            ->assertJsonPath('company_size', 'environ 50');
+    }
+
     public function test_passengers_are_capped_at_4(): void
     {
         $dispatcher = $this->dispatcher();

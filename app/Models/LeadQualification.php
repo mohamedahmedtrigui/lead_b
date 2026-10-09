@@ -120,7 +120,6 @@ class LeadQualification extends Model
             'other_apps_used' => 'boolean',
             'other_apps' => 'array',
             'other_apps_issues' => 'array',
-            'company_size' => 'integer',
             'employees_concerned' => 'integer',
             'trips_per_day' => 'integer',
             'interest_score' => 'integer',

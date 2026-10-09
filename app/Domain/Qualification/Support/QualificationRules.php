@@ -87,7 +87,7 @@ class QualificationRules
             'customer_preference' => $text(2000),
             'pain_point' => $text(2000),
             'company_name' => $text(),
-            'company_size' => $int(0, 1000000),
+            'company_size' => $text(100),
             'employees_concerned' => $int(0, 1000000),
             'trips_per_day' => $int(0, 1000),
             'b2b_same_schedule' => ['nullable', 'boolean'],

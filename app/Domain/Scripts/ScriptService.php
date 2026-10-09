@@ -52,7 +52,8 @@ class ScriptService
     {
         $default = DefaultScript::find($step->key);
 
-        $prompts = $step->prompts ?? [];
+        // Keep only the prompts that still exist in the code (drops removed questions).
+        $prompts = array_intersect_key($step->prompts ?? [], $default['prompts']);
         foreach ($data['prompts'] ?? [] as $field => $text) {
             $prompts[$field] = $text;
         }
