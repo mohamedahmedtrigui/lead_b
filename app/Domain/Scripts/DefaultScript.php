@@ -248,39 +248,18 @@ class DefaultScript
                 'tips' => 'Les éléments entre crochets sont remplis automatiquement avec les réponses du client.',
             ],
             [
-                'key' => 'qualification',
-                'title' => 'Évaluation (agent)',
-                'objective' => 'Évaluer l’opportunité — étape interne, rien à dire au client.',
-                'script' => null,
-                'question' => null,
-                'prompts' => [
-                    'wants_quotation' => 'Le client demande une proposition / un devis',
-                    'wants_callback' => 'Le client souhaite être rappelé',
-                    'priority_stars' => 'Votre évaluation de la priorité commerciale',
-                    'main_priority' => 'Priorité exprimée par le client (si mentionnée)',
-                ],
-                'options' => [
-                    'main_priority' => self::opts([
-                        'PRICE' => 'Le prix',
-                        'PUNCTUALITY' => 'La ponctualité',
-                        'COMFORT' => 'Le confort',
-                        'RELIABILITY' => 'La fiabilité',
-                        'ORGANIZATION' => 'L’organisation',
-                    ]),
-                ],
-                'responses' => [],
-                'tips' => 'Le score d’intérêt est calculé automatiquement. Les étoiles reflètent votre ressenti.',
-            ],
-            [
+                // Closing + agent evaluation merged; several next actions can be chosen.
                 'key' => 'closing',
-                'title' => 'Clôture de l’appel',
-                'objective' => 'Conclure selon la situation du client et définir la prochaine action.',
+                'title' => 'Clôture et évaluation',
+                'objective' => 'Conclure avec le client, choisir la ou les prochaines actions, puis évaluer l’opportunité.',
                 'script' => null,
                 'question' => null,
                 'prompts' => [
                     'summary_note' => 'Résumé interne de l’appel (trajet, horaires, fréquence, passagers, partage, solution actuelle, motivation)',
-                    'next_action' => 'Situation du client / prochaine action',
+                    'next_action' => 'Prochaine(s) action(s) — plusieurs choix possibles',
                     'callback_at' => 'Date et heure du rappel',
+                    'priority_stars' => 'Votre évaluation de la priorité commerciale',
+                    'main_priority' => 'Priorité exprimée par le client (si mentionnée)',
                 ],
                 'options' => [
                     'next_action' => self::opts([
@@ -291,6 +270,13 @@ class DefaultScript
                         'FOLLOW_UP' => 'Relance / suivi',
                         'NOT_INTERESTED' => 'Pas intéressé',
                         'NRP' => 'NRP (communication coupée)',
+                    ]),
+                    'main_priority' => self::opts([
+                        'PRICE' => 'Le prix',
+                        'PUNCTUALITY' => 'La ponctualité',
+                        'COMFORT' => 'Le confort',
+                        'RELIABILITY' => 'La fiabilité',
+                        'ORGANIZATION' => 'L’organisation',
                     ]),
                 ],
                 'responses' => [
@@ -303,7 +289,7 @@ class DefaultScript
                         'NOT_INTERESTED' => 'Ma fama 7atta mochkel. Merci 3la wa9tek w 3la توضيحك. Nchallah nharek zin.',
                     ],
                 ],
-                'tips' => 'Exemple de résumé : « Client recherche transport quotidien Sfax → centre-ville, départ 07h30, retour 17h30, 5 jours/semaine. 2 personnes. »',
+                'tips' => '« Pas intéressé » et « NRP » ne se combinent pas avec d’autres actions. Le score est calculé automatiquement ; les étoiles reflètent votre ressenti.',
             ],
             [
                 'key' => 'summary',

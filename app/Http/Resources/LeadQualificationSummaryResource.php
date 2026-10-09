@@ -14,7 +14,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class LeadQualificationSummaryResource extends JsonResource
 {
     /** Columns to select when eager loading for a list. */
-    public const COLUMNS = ['id', 'lead_id', 'status', 'transport_need', 'is_b2b', 'interest_score', 'interest_level', 'priority_stars', 'next_action', 'completed_at'];
+    public const COLUMNS = ['id', 'lead_id', 'status', 'transport_need', 'is_b2b', 'interest_score', 'interest_level', 'priority_stars', 'next_action', 'next_actions', 'completed_at'];
 
     public function toArray(Request $request): array
     {
@@ -27,6 +27,7 @@ class LeadQualificationSummaryResource extends JsonResource
             'interest_level' => $this->interest_level?->value,
             'priority_stars' => $this->priority_stars,
             'next_action' => $this->next_action?->value,
+            'next_actions' => $this->next_actions ?? ($this->next_action ? [$this->next_action->value] : []),
             'completed_at' => $this->completed_at?->toIso8601String(),
         ];
     }

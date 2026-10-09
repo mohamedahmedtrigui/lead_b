@@ -201,6 +201,46 @@ class QualificationTest extends TestCase
             ->assertJsonPath('qualification.other_apps', null);
     }
 
+    public function test_several_next_actions_can_be_combined(): void
+    {
+        $dispatcher = $this->dispatcher();
+        $this->actingAs($dispatcher);
+
+        // Interested + quote + sales: qualified, the quote counts in the score.
+        $lead = Lead::factory()->assignedTo($dispatcher->id)->create();
+        $this->postJson("/api/v1/leads/{$lead->id}/qualification/complete", $this->answers([
+            'next_action' => null,
+            'wants_quotation' => null,
+            'next_actions' => ['QUALIFIED', 'SEND_QUOTATION', 'TRANSFER_TO_SALES'],
+        ]))->assertOk()
+            ->assertJsonPath('lead.status', 'QUALIFIED')
+            ->assertJsonPath('qualification.next_action', 'SEND_QUOTATION')
+            ->assertJsonPath('qualification.next_actions', ['QUALIFIED', 'SEND_QUOTATION', 'TRANSFER_TO_SALES'])
+            ->assertJsonPath('qualification.wants_quotation', true);
+
+        // Quote + callback: the callback wins (status + date required).
+        $lead2 = Lead::factory()->assignedTo($dispatcher->id)->create();
+        $url = "/api/v1/leads/{$lead2->id}/qualification/complete";
+        $this->postJson($url, $this->answers(['next_actions' => ['SEND_QUOTATION', 'CALLBACK']]))
+            ->assertUnprocessable()->assertJsonValidationErrors('callback_at');
+        $this->postJson($url, $this->answers([
+            'next_actions' => ['SEND_QUOTATION', 'CALLBACK'],
+            'callback_at' => now()->addDay()->toIso8601String(),
+        ]))->assertOk()
+            ->assertJsonPath('lead.status', 'CALLBACK')
+            ->assertJsonPath('qualification.wants_callback', true);
+    }
+
+    public function test_not_interested_cannot_be_combined(): void
+    {
+        $dispatcher = $this->dispatcher();
+        $lead = Lead::factory()->assignedTo($dispatcher->id)->create();
+
+        $this->actingAs($dispatcher)->postJson("/api/v1/leads/{$lead->id}/qualification/complete", $this->answers([
+            'next_actions' => ['NOT_INTERESTED', 'FOLLOW_UP'],
+        ]))->assertUnprocessable()->assertJsonValidationErrors('next_actions');
+    }
+
     public function test_company_size_is_free_text(): void
     {
         $dispatcher = $this->dispatcher();

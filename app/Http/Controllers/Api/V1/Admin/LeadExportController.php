@@ -64,7 +64,7 @@ class LeadExportController extends Controller
         'Score' => 'q.interest_score',
         'Niveau' => 'q.interest_level',
         'Étoiles' => 'q.priority_stars',
-        'Prochaine action' => 'q.next_action',
+        'Prochaine action' => 'q.next_actions',
         'Rappel' => 'lead.callback_at',
         'Résumé' => 'q.summary_note',
         'Qualifié le' => 'q.completed_at',
@@ -137,7 +137,9 @@ class LeadExportController extends Controller
             default => $lead->qualification?->{$field},
         };
 
-        $label = fn (string $raw) => $this->labels[$field][$raw] ?? $raw;
+        // next_actions uses the labels of the next_action options.
+        $labelField = $field === 'next_actions' ? 'next_action' : $field;
+        $label = fn (string $raw) => $this->labels[$labelField][$raw] ?? $raw;
 
         return match (true) {
             $value === null => '',

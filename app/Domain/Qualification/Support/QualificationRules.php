@@ -100,6 +100,8 @@ class QualificationRules
             'priority_stars' => $int(1, 5),
             'summary_note' => $text(5000),
             'next_action' => $enum(NextAction::class),
+            'next_actions' => ['nullable', 'array', 'max:7'],
+            'next_actions.*' => ['distinct', Rule::enum(NextAction::class)],
             'callback_at' => ['nullable', 'date'],
         ];
     }
@@ -121,6 +123,13 @@ class QualificationRules
         $nextAction = NextAction::tryFrom((string) ($input['next_action'] ?? ''));
 
         $require('next_action');
+        $rules['next_actions'] = ['required', 'array', 'min:1', 'max:7', function (string $attribute, mixed $value, \Closure $fail) {
+            $chosen = array_filter(array_map(fn ($a) => NextAction::tryFrom((string) $a), (array) $value));
+            $exclusive = array_filter($chosen, fn (NextAction $a) => $a->isExclusive());
+            if ($exclusive && count($chosen) > 1) {
+                $fail('« Pas intéressé » et « NRP » ne se combinent pas avec d’autres actions.');
+            }
+        }];
         $rules['summary_note'] = ['required', 'string', 'min:'.config('qualification.summary_note_min_length'), 'max:5000'];
         $rules['callback_at'] = ['nullable', 'required_if:next_action,'.NextAction::CALLBACK->value, 'date', 'after:now'];
 
@@ -175,6 +184,27 @@ class QualificationRules
     }
 
     /**
+     * Several next actions can be chosen; `next_action` is the main one, derived
+     * here (older clients that only send `next_action` keep working).
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    public static function normalizeNextActions(array $input): array
+    {
+        if (! array_key_exists('next_actions', $input) && filled($input['next_action'] ?? null)) {
+            $input['next_actions'] = [$input['next_action']];
+        }
+
+        if (is_array($input['next_actions'] ?? null)) {
+            $input['next_actions'] = array_values(array_unique(array_filter($input['next_actions'])));
+            $input['next_action'] = NextAction::primary($input['next_actions'])?->value;
+        }
+
+        return $input;
+    }
+
+    /**
      * French labels used in validation messages.
      *
      * @return array<string, string>
@@ -207,6 +237,7 @@ class QualificationRules
             'priority_stars' => 'priorité (étoiles)',
             'summary_note' => 'résumé de l\'appel',
             'next_action' => 'prochaine action',
+            'next_actions' => 'prochaine action',
             'callback_at' => 'date de rappel',
         ];
     }

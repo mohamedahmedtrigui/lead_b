@@ -74,6 +74,7 @@ class LeadQualification extends Model
         'priority_stars',
         'summary_note',
         'next_action',
+        'next_actions',
         'callback_at',
     ];
 
@@ -117,6 +118,7 @@ class LeadQualification extends Model
             'estimated_passengers_per_trip' => 'integer',
             'experience_rating' => 'integer',
             'extra_routes' => 'array',
+            'next_actions' => 'array',
             'other_apps_used' => 'boolean',
             'other_apps' => 'array',
             'other_apps_issues' => 'array',

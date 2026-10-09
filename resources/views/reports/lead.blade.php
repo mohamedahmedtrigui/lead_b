@@ -79,7 +79,7 @@
                     @endif
                 </td></tr>
                 <tr><td class="k">Priorité (agent)</td><td class="v">{{ $q->priority_stars ? str_repeat('★', $q->priority_stars).str_repeat('☆', 5 - $q->priority_stars) : '—' }}</td></tr>
-                <tr><td class="k">Prochaine action</td><td class="v">{{ $q->next_action ? ($nextActionLabels[$q->next_action->value] ?? $q->next_action->value) : '—' }}</td></tr>
+                <tr><td class="k">Prochaine action</td><td class="v">{{ collect($q->next_actions ?: ($q->next_action ? [$q->next_action->value] : []))->map(fn ($a) => $nextActionLabels[$a] ?? $a)->join(', ') ?: '—' }}</td></tr>
                 @if ($q->callback_at)
                     <tr><td class="k">Rappel</td><td class="v">{{ $fmt($q->callback_at) }}</td></tr>
                 @endif

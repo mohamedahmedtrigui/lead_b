@@ -58,11 +58,13 @@ class ScoringService
             $rules['b2b_need'] = $w['b2b_need'];
         }
 
-        if ($q->wants_quotation === true || $q->next_action === NextAction::SEND_QUOTATION) {
+        $actions = $q->next_actions ?? ($q->next_action ? [$q->next_action->value] : []);
+
+        if ($q->wants_quotation === true || in_array(NextAction::SEND_QUOTATION->value, $actions, true)) {
             $rules['requests_quotation'] = $w['requests_quotation'];
         }
 
-        if ($q->wants_callback === true || $q->next_action === NextAction::CALLBACK) {
+        if ($q->wants_callback === true || in_array(NextAction::CALLBACK->value, $actions, true)) {
             $rules['requests_callback'] = $w['requests_callback'];
         }
 

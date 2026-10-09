@@ -101,6 +101,7 @@ class QualificationService
                 'score' => $qualification->interest_score,
                 'level' => $qualification->interest_level?->value,
                 'next_action' => $nextAction->value,
+                'next_actions' => $qualification->next_actions,
             ], $dispatcher);
 
             return $qualification->fresh();
@@ -162,6 +163,12 @@ class QualificationService
             $q->transport_need = TransportNeed::PERSONAL;
         } elseif ($q->transport_need === TransportNeed::PERSONAL) {
             $q->transport_need = null;
+        }
+
+        // "Devis" / "Rappel" in the closing actions are the client's requests.
+        if (is_array($q->next_actions) && $q->next_actions !== []) {
+            $q->wants_quotation = in_array(NextAction::SEND_QUOTATION->value, $q->next_actions, true);
+            $q->wants_callback = in_array(NextAction::CALLBACK->value, $q->next_actions, true);
         }
 
         // The "other apps" questions are asked when the client travels by app today.

@@ -14,6 +14,11 @@ class CompleteQualificationRequest extends FormRequest
         return Gate::inspect('work', $this->route('lead'));
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->replace(QualificationRules::normalizeNextActions($this->all()));
+    }
+
     public function rules(): array
     {
         return QualificationRules::complete($this->all());

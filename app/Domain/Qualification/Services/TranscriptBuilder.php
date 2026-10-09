@@ -100,6 +100,10 @@ class TranscriptBuilder
 
             $main = $def['main'];
             $answer = $this->format($main, $q->{$main}, $labels);
+            // Closing: every chosen next action ("Client intéressé, Devis").
+            if ($key === 'closing' && ! empty($q->next_actions)) {
+                $answer = implode(', ', array_map(fn ($a) => $labels['next_action'][$a] ?? $a, $q->next_actions));
+            }
             $details = [];
             foreach ($def['details'] as $field) {
                 $value = $this->format($field, $q->{$field}, $labels);
